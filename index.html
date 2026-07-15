@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trivia Futbolera - Vision</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Animación especial de zoom suave para la ventana flotante */
+        .pop-up {
+            animation: popUp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        @keyframes popUp {
+            from { opacity: 0; transform: scale(0.9) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-[#2575e6] min-h-screen flex items-center justify-center p-4 font-sans text-slate-800">
+
+    <audio id="bg-music" src="music.mp3" loop></audio>
+
+    <div class="w-full max-w-md bg-[#2575e6] rounded-3xl shadow-2xl overflow-hidden border-4 border-white/15 flex flex-col min-h-[660px] justify-between relative text-white">
+        
+        <div id="feedback-overlay" class="hidden absolute inset-0 z-50 bg-[#0d2347]/85 backdrop-blur-md flex flex-col items-center justify-center p-6 fade-in">
+            <div class="w-full max-w-[320px] bg-white text-slate-800 p-6 rounded-3xl shadow-2xl border-4 border-yellow-400 text-center space-y-5 pop-up">
+                <div id="feedback-alert" class="text-xl font-black text-green-600 flex flex-col items-center gap-2">
+                    <span class="text-5xl">🏆</span>
+                    ¡RESPUESTA CORRECTA!
+                </div>
+                
+                <p id="feedback-reason" class="text-xs text-gray-500 font-semibold leading-relaxed">
+                    ¡Buen trabajo! Estás un paso más cerca.
+                </p>
+
+                <button onclick="nextQuestion()" class="w-full bg-yellow-400 hover:bg-yellow-500 text-[#0d2347] font-black py-4 rounded-2xl shadow-lg transition-transform transform active:scale-95 uppercase tracking-wide text-sm">
+                    Siguiente Pregunta ➔
+                </button>
+            </div>
+        </div>
+
+        <div id="non-client-overlay" class="hidden absolute inset-0 z-50 bg-[#0d2347]/90 backdrop-blur-md flex flex-col items-center justify-center p-6 fade-in">
+            <div class="w-full max-w-[320px] bg-white text-slate-800 p-6 rounded-3xl shadow-2xl border-4 border-red-500 text-center space-y-5 pop-up">
+                <div class="text-5xl">✨🪄</div>
+                <h3 class="text-lg font-black text-slate-900 uppercase">¡Ups! Un momento...</h3>
+                
+                <p class="text-xs text-gray-600 font-bold leading-relaxed">
+                    Lo siento, al parecer aún no eres familia de <span class="text-[#2575e6] font-extrabold">Vision Mágica</span>, ¿qué esperas para suscribirte?
+                </p>
+
+                <div class="space-y-2">
+                    <a href="https://www.visionmagica.net/" target="_blank" class="block w-full bg-green-500 hover:bg-green-600 text-white font-black py-3.5 rounded-2xl shadow-md transition-all transform active:scale-95 uppercase tracking-wider text-xs text-center">
+                        Suscribirme ahora 🚀
+                    </a>
+                    
+                    <button onclick="closeNonClientPopup()" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2.5 rounded-2xl text-xs transition-all active:scale-95">
+                        Volver al inicio
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <header class="p-6 pb-2 text-center relative flex flex-col items-center">
+            
+            <div class="w-full bg-[#0d2347] rounded-3xl p-5 flex items-center justify-center shadow-2xl border border-white/10 max-w-[290px]">
+                <img id="brand-logo" src="LOG.png" alt="Vision Logo" class="object-contain max-h-14 w-auto">
+            </div>
+
+            <h2 id="trivia-title" class="mt-4 text-2xl font-black italic tracking-wider text-white uppercase drop-shadow-md flex items-center justify-center gap-2">
+                TRIVIA FUTBOLERA <span class="text-xl">⚽</span>
+            </h2>
+
+            <div id="level-badge" class="hidden mt-4 inline-block bg-yellow-400 text-[#0d2347] text-xs font-black px-3 py-1 rounded-full uppercase tracking-widest">
+                Nivel 1
+            </div>
+
+            <div id="timer-wrapper" class="hidden w-full bg-[#0d2347] h-3 mt-4 rounded-full overflow-hidden p-[2px]">
+                <div id="timer-bar" class="bg-yellow-400 h-full rounded-full transition-all duration-100 ease-linear" style="width: 100%;"></div>
+            </div>
+            
+            <div id="progress-wrapper" class="hidden w-full bg-[#0d2347]/50 h-1.5 mt-3 rounded-full overflow-hidden">
+                <div id="progress-bar" class="bg-white/40 h-full transition-all duration-300" style="width: 0%;"></div>
+            </div>
+        </header>
+
+        <main class="px-6 flex-grow flex flex-col justify-center">
+            
+            <div id="screen-intro" class="space-y-6 fade-in text-center py-4">
+                <div class="bg-white text-slate-800 p-8 rounded-3xl shadow-2xl flex flex-col items-center space-y-6">
+                    
+                    <img src="tubi 3D.png" alt="Astronauta" class="w-40 h-auto object-contain animate-pulse">
+                    
+                    <p class="text-sm md:text-base font-extrabold text-slate-700 leading-relaxed max-w-[280px]">
+                        ¡Demuestra cuánto sabes sobre el fútbol! Enfréntate al reto definitivo de 2 niveles y participa en maravillosos premios.
+                    </p>
+                    
+                    <button onclick="startApp()" class="w-full bg-black hover:bg-neutral-900 text-white font-black py-4 px-6 rounded-2xl shadow-xl transition-transform transform active:scale-95 text-base uppercase tracking-widest">
+                        EMPEZAR ➔
+                    </button>
+                </div>
+            </div>
+
+            <div id="screen-welcome" class="hidden space-y-6 fade-in text-center py-4">
+                <div class="text-center">
+                    <p class="text-xs font-black uppercase tracking-widest text-yellow-300">Te invita a participar en la</p>
+                    <h3 class="text-2xl font-black italic tracking-wide uppercase text-white mt-1">Gran Trivia</h3>
+                </div>
+
+                <div class="bg-white text-slate-800 p-6 rounded-3xl shadow-xl space-y-4">
+                    <h3 class="text-lg font-black text-[#0d2347] uppercase tracking-wide">¿Cómo Jugar?</h3>
+                    <ul class="text-left space-y-3 text-xs text-gray-700 font-semibold">
+                        <li class="flex items-start gap-2.5">
+                            <span class="bg-[#2575e6] text-white font-bold rounded-full w-5 h-5 flex items-center justify-center text-[10px] shrink-0 mt-0.5">1</span>
+                            <span>Supera el <strong>Nivel 1</strong> (3 preguntas - 10 segundos c/u).</span>
+                        </li>
+                        <li class="flex items-start gap-2.5">
+                            <span class="bg-[#2575e6] text-white font-bold rounded-full w-5 h-5 flex items-center justify-center text-[10px] shrink-0 mt-0.5">2</span>
+                            <span>Registra tus datos para poder continuar.</span>
+                        </li>
+                        <li class="flex items-start gap-2.5">
+                            <span class="bg-[#2575e6] text-white font-bold rounded-full w-5 h-5 flex items-center justify-center text-[10px] shrink-0 mt-0.5">3</span>
+                            <span>Avanza al <strong>Nivel 2</strong> (3 preguntas - 7 segundos c/u) y predice al campeón.</span>
+                        </li>
+                        <li class="flex items-start gap-2.5 text-red-600 font-bold">
+                            <span class="bg-red-500 text-white font-bold rounded-full w-5 h-5 flex items-center justify-center text-[10px] shrink-0 mt-0.5">⚠️</span>
+                            <span>¡Si te equivocas o te quedas sin tiempo, regresas al inicio!</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <button onclick="startGame()" class="w-full bg-yellow-400 hover:bg-yellow-500 text-[#0d2347] font-black py-4 px-6 rounded-2xl shadow-xl transition-transform transform active:scale-95 text-lg uppercase tracking-wider">
+                    JUGAR AHORA ➔
+                </button>
+            </div>
+
+            <div id="screen-game" class="hidden space-y-4 fade-in">
+                <div class="bg-white text-slate-800 p-6 rounded-3xl shadow-xl border-2 border-yellow-400 flex flex-col space-y-5">
+                    <div class="text-center">
+                        <p id="question-text" class="text-base md:text-lg font-extrabold text-slate-900 leading-snug">
+                            Cargando pregunta...
+                        </p>
+                    </div>
+                    
+                    <div id="options-container" class="space-y-2.5">
+                        </div>
+                </div>
+            </div>
+
+            <div id="screen-form" class="hidden space-y-5 fade-in">
+                <div class="text-center space-y-1">
+                    <h3 class="text-2xl font-black text-yellow-300 italic">¡COMPLETADO NIVEL 1!</h3>
+                    <p class="text-xs text-blue-100">Regístrate para continuar al decisivo Nivel 2.</p>
+                </div>
+                
+					<!-- CÓDIGO CORREGIDO DEL FORMULARIO -->
+				<form id="lead-form" name="registro-trivia" method="POST" data-netlify="true" onsubmit="submitForm(event)" class="bg-white text-slate-800 p-6 rounded-3xl shadow-xl space-y-4">
+    
+					<input type="hidden" name="form-name" value="registro-trivia" />
+					<input type="hidden" id="form-prediccion" name="prediccion_campeon" value="" />
+
+					<div>
+						<label class="block text-xs font-black text-gray-500 uppercase mb-1">Nombre y Apellido</label>
+						<!-- Se cambió el id de 'form-name' a 'input-name' para evitar colisiones -->
+						<input type="text" name="nombre" id="input-name" required placeholder="Ingresa tu nombre completo" class="w-full p-3 bg-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2575e6] transition-all font-semibold text-sm">
+					</div>
+					<div>
+						<label class="block text-xs font-black text-gray-500 uppercase mb-1">Cédula de Identidad</label>
+						<input type="text" name="cedula" id="input-id" required placeholder="Número de cédula" class="w-full p-3 bg-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2575e6] transition-all font-semibold text-sm">
+					</div>
+					<div>
+						<label class="block text-xs font-black text-gray-500 uppercase mb-1">Correo Electrónico</label>
+						<input type="email" name="email" id="input-email" required placeholder="correo@ejemplo.com" class="w-full p-3 bg-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2575e6] transition-all font-semibold text-sm">
+					</div>
+					<div>
+						<label class="block text-xs font-black text-gray-500 uppercase mb-1">Número de Celular</label>
+						<input type="tel" name="telefono" id="input-phone" required placeholder="Ej: 0999999999" class="w-full p-3 bg-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2575e6] transition-all font-semibold text-sm">
+					</div>
+						<div class="flex items-start gap-2 pt-1 text-left">
+						<input type="checkbox" required id="terms" class="mt-1 accent-[#2575e6] h-4 w-4 shrink-0">
+						<label for="terms" class="text-[10px] text-gray-500 leading-tight">He leído y acepto las condiciones generales, Términos y Condiciones y Política de privacidad.</label>
+					</div>
+    
+					<button id="btn-form-submit" type="submit" class="w-full bg-[#2575e6] hover:bg-blue-700 text-white font-black py-4 rounded-2xl shadow-md transition-transform transform active:scale-95 uppercase tracking-wider text-sm mt-2">
+						Ir al Nivel 2 ➔
+					</button>
+				</form>
+            </div>
+
+            <div id="screen-end" class="hidden text-center space-y-6 fade-in">
+                <div class="bg-white text-slate-800 p-8 rounded-3xl shadow-2xl space-y-4">
+                    <span class="text-6xl inline-block animate-bounce">🏆⚽</span>
+                    <h3 class="text-2xl font-black text-green-600">¡TRIVIA SUPERADA!</h3>
+                    <p class="text-sm text-gray-600 leading-relaxed font-semibold">Tus datos y tu predicción del campeón han sido guardados con éxito en Netlify. ¡Mucha suerte!</p>
+                </div>
+                <button onclick="restartGame()" class="w-full bg-yellow-400 hover:bg-yellow-500 text-[#0d2347] font-black py-4 rounded-2xl shadow-lg uppercase tracking-wide">
+                    Volver al Inicio
+                </button>
+            </div>
+
+        </main>
+
+        <footer class="p-4 text-center text-[10px] text-white/50">
+            Powered by Mini Trivia Ec
+        </footer>
+    </div>
+
+    <script>
+        const rawDatabase = [
+            { q: "¿Cuál es el apodo de la selección ecuatoriana de fútbol?", a: ["La Tri", "Los Cafeteros", "La Albiceleste", "Los Charrúas"], correct: "La Tri", desc: "La histórica Selección Ecuatoriana de fútbol." },
+            { q: "¿En qué año Ecuador clasificó por primera vez a un Mundial?", a: ["2002", "1998", "2006", "2010"], correct: "2002", desc: "¡Histórico logro de la mano del Bolillo Gómez!" },
+            { q: "¿Qué jugador ecuatoriano anotó el primer gol de Ecuador en un Mundial?", a: ["Agustín Delgado", "Antonio Valencia", "Enner Valencia", "Álex Aguinaga"], correct: "Agustín Delgado", desc: "El histórico cabezazo del 'Tin' frente a México en 2002." },
+            { q: "¿Cuál es el estadio principal de la selección ecuatoriana?", a: ["Atahualpa", "Monumental", "Rodrigo Paz Delgado", "Capwell"], correct: "Atahualpa", desc: "El Coloso de El Batán en Quito." },
+            { q: "¿Qué ciudad es conocida como la capital del fútbol ecuatoriano?", a: ["Quito", "Cuenca", "Loja", "Ambato"], correct: "Quito", desc: "Sede de grandes gestas de nuestra Selección." },
+            { q: "What young Ecuadorian star was signed by Chelsea?", a: ["Kendry Páez", "Plata", "Sarmiento", "Campana"], correct: "Kendry Páez", desc: "La joya de Independiente del Valle." },
+            { q: "¿Quién es el máximo goleador histórico de Ecuador?", a: ["Enner Valencia", "Felipe Caicedo", "Agustín Delgado", "Christian Benítez"], correct: "Enner Valencia", desc: "Goleador imparable en los Mundiales." },
+            { q: "¿Qué club ecuatoriano ganó la Copa Libertadores 2008?", a: ["Liga de Quito", "Barcelona SC", "Emelec", "El Nacional"], correct: "Liga de Quito", desc: "Hazaña continental en el Maracaná." },
+            { q: "¿Qué equipo ecuatoriano ganó la Sudamericana 2019?", a: ["Independiente del Valle", "Liga de Quito", "Emelec", "Barcelona"], correct: "Independiente del Valle", desc: "Sorprendió al continente bajo la lluvia de Asunción." }
+        ];
+
+        // Pregunta predictiva final modificable
+        const finalQuestion = {
+            q: "¿Quién ganará este Mundial 2026?",
+            a: ["España", "Argentina"],
+            correct: "", 
+            desc: "¡Excelente predicción! Hemos guardado tu participación."
+        };
+
+        let selectedQuestions = [];
+        let currentQuestionIndex = 0;
+        let currentLevel = 1;
+        let userPrediction = ""; 
+        
+        let timerInterval = null;
+        let totalTime = 10;
+        let timeRemaining = 10;
+        const tickRate = 50;
+
+        // Guardado de datos intermedio
+        let tempFormData = {};
+
+        // Función 1: Se ejecuta al presionar EMPEZAR en la Intro
+        function startApp() {
+            // Se reproduce la música de fondo en este preciso momento de interacción
+            const music = document.getElementById('bg-music');
+            if (music) {
+                music.play().catch(e => console.log("Se requiere interacción para reproducir música:", e));
+            }
+
+            // Transicionamos a la pantalla de Instrucciones
+            document.getElementById('screen-intro').classList.add('hidden');
+            document.getElementById('screen-welcome').classList.remove('hidden');
+        }
+
+        // Función 2: Se ejecuta al presionar "JUGAR AHORA" desde las Instrucciones
+        function startGame() {
+            // Ocultamos el título general para dar paso a la barra de niveles y de progreso
+            document.getElementById('trivia-title').classList.add('hidden');
+
+            const shuffledDb = shuffle([...rawDatabase]);
+            selectedQuestions = shuffledDb.slice(0, 5); // 5 preguntas aleatorias
+            selectedQuestions.push(finalQuestion);       // 1 pregunta fija final
+            
+            currentQuestionIndex = 0;
+            currentLevel = 1;
+            userPrediction = "";
+            tempFormData = {};
+
+            document.getElementById('level-badge').classList.remove('hidden');
+            document.getElementById('timer-wrapper').classList.remove('hidden');
+            document.getElementById('progress-wrapper').classList.remove('hidden');
+            updateLevelBadge();
+
+            document.getElementById('screen-welcome').classList.add('hidden');
+            document.getElementById('screen-game').classList.remove('hidden');
+            
+            showQuestion();
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function updateLevelBadge() {
+            document.getElementById('level-badge').innerText = `Nivel ${currentLevel}`;
+        }
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            totalTime = currentLevel === 1 ? 10 : 7;
+            timeRemaining = totalTime;
+
+            const timerBar = document.getElementById('timer-bar');
+            timerBar.style.width = '100%';
+            timerBar.className = "bg-yellow-400 h-full rounded-full transition-all duration-100 ease-linear";
+
+            const intervalMs = tickRate;
+            
+            timerInterval = setInterval(() => {
+                timeRemaining -= (intervalMs / 1000);
+                
+                const percentage = Math.max((timeRemaining / totalTime) * 100, 0);
+                timerBar.style.width = `${percentage}%`;
+
+                if (percentage <= 30) {
+                    timerBar.classList.remove('bg-yellow-400');
+                    timerBar.classList.add('bg-red-500');
+                } else {
+                    timerBar.classList.remove('bg-red-500');
+                    timerBar.classList.add('bg-yellow-400');
+                }
+
+                if (timeRemaining <= 0) {
+                    clearInterval(timerInterval);
+                    handleTimeOut();
+                }
+            }, intervalMs);
+        }
+
+        function handleTimeOut() {
+            alert("⏰ ¡SE AGOTÓ EL TIEMPO! Vuelves al inicio.");
+            restartGame();
+        }
+
+        function showQuestion() {
+            const currentQuestion = selectedQuestions[currentQuestionIndex];
+            
+            const progressInLevel = currentQuestionIndex % 3;
+            const progressPercent = (progressInLevel / 3) * 100;
+            document.getElementById('progress-bar').style.width = `${progressPercent}%`;
+
+            document.getElementById('question-text').innerText = currentQuestion.q;
+
+            const optionsToRender = currentQuestionIndex === 5 ? [...currentQuestion.a] : shuffle([...currentQuestion.a]);
+            
+            const container = document.getElementById('options-container');
+            container.innerHTML = '';
+            
+            optionsToRender.forEach(option => {
+                const button = document.createElement('button');
+                button.className = "w-full text-left p-3.5 rounded-2xl font-bold transition-all bg-gray-100 text-slate-800 shadow-sm border border-slate-200 hover:bg-yellow-100 active:scale-95 text-sm";
+                button.innerText = option;
+                button.onclick = () => selectOption(button, option, currentQuestion.correct);
+                container.appendChild(button);
+            });
+
+            document.getElementById('feedback-overlay').classList.add('hidden');
+            startTimer();
+        }
+
+        function selectOption(button, selected, correct) {
+            clearInterval(timerInterval);
+
+            const container = document.getElementById('options-container');
+            const buttons = container.getElementsByTagName('button');
+            const currentQuestion = selectedQuestions[currentQuestionIndex];
+            const isPredictive = (correct === "");
+
+            if (isPredictive) {
+                userPrediction = selected;
+                document.getElementById('form-prediccion').value = selected; 
+            }
+
+            for (let btn of buttons) {
+                btn.disabled = true;
+                if (!isPredictive && btn.innerText === correct) {
+                    btn.classList.add('bg-green-500', 'text-white', 'border-green-600');
+                }
+            }
+
+            const feedbackAlert = document.getElementById('feedback-alert');
+            const feedbackReason = document.getElementById('feedback-reason');
+            
+            if (isPredictive || selected === correct) {
+                button.classList.add('bg-green-500', 'text-white');
+                
+                feedbackAlert.innerHTML = `<span class="text-5xl">🏆</span> ¡RESPUESTA CORRECTA!`;
+                feedbackReason.innerText = currentQuestion.desc || "¡Sigue así y llévate el premio!";
+                
+                setTimeout(() => {
+                    document.getElementById('feedback-overlay').classList.remove('hidden');
+                }, 400);
+            } else {
+                button.classList.add('bg-red-500', 'text-white');
+                setTimeout(() => {
+                    alert(`❌ ¡RESPUESTA INCORRECTA! La respuesta era: ${correct}. Vuelves al inicio.`);
+                    restartGame();
+                }, 500);
+            }
+        }
+
+        function nextQuestion() {
+            document.getElementById('feedback-overlay').classList.add('hidden');
+            currentQuestionIndex++;
+            
+            // Al terminar la pregunta 3 (Índice 3), mostramos el Registro de datos
+            if (currentQuestionIndex === 3 && currentLevel === 1) {
+                clearInterval(timerInterval);
+                document.getElementById('progress-bar').style.width = `100%`;
+                document.getElementById('level-badge').classList.add('hidden');
+                document.getElementById('timer-wrapper').classList.add('hidden');
+                document.getElementById('progress-wrapper').classList.add('hidden');
+                
+                document.getElementById('screen-game').classList.add('hidden');
+                document.getElementById('screen-form').classList.remove('hidden');
+            } 
+            // Al responder la pregunta final de predicción (Índice 6), hacemos submit automático
+            else if (currentQuestionIndex === 6) {
+                clearInterval(timerInterval);
+                sendDataToNetlify();
+            } else {
+                showQuestion();
+            }
+        }
+
+        // Se ejecuta al completar el formulario de registro (Paso intermedio con consulta al servidor de Netlify)
+        
+		async function submitForm(event) {
+			event.preventDefault();
+    
+			const submitBtn = document.getElementById('btn-form-submit');
+			const cedulaIngresada = document.getElementById('input-id').value.trim(); // ID corregido
+
+			submitBtn.disabled = true;
+			submitBtn.innerText = "Verificando cliente...";
+
+			try {
+				const response = await fetch("/.netlify/functions/validar-cedula", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ cedula: cedulaIngresada })
+				});
+
+				const result = await response.json();
+
+				if (!result.autorizado) {
+					document.getElementById('non-client-overlay').classList.remove('hidden');
+					// Restablecemos el botón por si cierran el modal e intentan de nuevo
+					submitBtn.disabled = false;
+					submitBtn.innerText = "Ir al Nivel 2 ➔";
+					return;
+				}
+
+				// Si está autorizado, guardamos los datos usando los IDs correctos del DOM
+				tempFormData = {
+					nombre: document.getElementById('input-name').value,
+					cedula: cedulaIngresada,
+					email: document.getElementById('input-email').value,
+					telefono: document.getElementById('input-phone').value
+				};
+
+				// Pasar al Nivel 2
+				currentLevel = 2;
+				document.getElementById('screen-form').classList.add('hidden');
+				document.getElementById('screen-game').classList.remove('hidden');
+        
+				document.getElementById('level-badge').classList.remove('hidden');
+				document.getElementById('timer-wrapper').classList.remove('hidden');
+				document.getElementById('progress-wrapper').classList.remove('hidden');
+				updateLevelBadge();
+
+				showQuestion();
+
+			} catch (error) {
+				console.error("Error al validar cédula:", error);
+				alert("⚠️ Error de conexión al validar cliente. Por favor, vuelve a intentarlo.");
+			} finally {
+				submitBtn.disabled = false;
+				submitBtn.innerText = "Ir al Nivel 2 ➔";
+			}
+		}
+
+        // Nueva función para cerrar el popup de NO cliente y reiniciar el juego
+        function closeNonClientPopup() {
+            document.getElementById('non-client-overlay').classList.add('hidden');
+            restartGame();
+        }
+
+        // Envía el formulario simulado asíncronamente con Fetch sin romper la experiencia local
+        function sendDataToNetlify() {
+            const formData = new FormData();
+
+            formData.append("form-name", "registro-trivia");
+            formData.append("nombre", tempFormData.nombre);
+            formData.append("cedula", tempFormData.cedula);
+            formData.append("email", tempFormData.email);
+            formData.append("telefono", tempFormData.telefono);
+            formData.append("prediccion_campeon", userPrediction);
+
+            fetch("/", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams(formData).toString()
+            })
+            .then(() => {
+                mostrarPantallaFinal();
+            })
+            .catch((error) => {
+                console.warn("Petición Fetch fallida (Normal si pruebas de forma local):", error);
+                mostrarPantallaFinal();
+            });
+        }
+
+        function mostrarPantallaFinal() {
+            // Pausar música al ganar
+            const music = document.getElementById('bg-music');
+            if (music) {
+                music.pause();
+            }
+
+            document.getElementById('progress-bar').style.width = `100%`;
+            document.getElementById('level-badge').classList.add('hidden');
+            document.getElementById('timer-wrapper').classList.add('hidden');
+            document.getElementById('progress-wrapper').classList.add('hidden');
+            
+            document.getElementById('screen-game').classList.add('hidden');
+            document.getElementById('screen-end').classList.remove('hidden');
+        }
+
+        function restartGame() {
+            clearInterval(timerInterval);
+            document.getElementById('lead-form').reset();
+
+            // Pausar música al reiniciar
+            const music = document.getElementById('bg-music');
+            if (music) {
+                music.pause();
+                music.currentTime = 0;
+            }
+            
+            // Reestablecer la visibilidad de elementos iniciales
+            document.getElementById('trivia-title').classList.remove('hidden');
+
+            document.getElementById('screen-game').classList.add('hidden');
+            document.getElementById('screen-form').classList.add('hidden');
+            document.getElementById('screen-end').classList.add('hidden');
+            document.getElementById('screen-welcome').classList.add('hidden');
+            document.getElementById('feedback-overlay').classList.add('hidden');
+            document.getElementById('non-client-overlay').classList.add('hidden');
+            
+            document.getElementById('level-badge').classList.add('hidden');
+            document.getElementById('timer-wrapper').classList.add('hidden');
+            document.getElementById('progress-wrapper').classList.add('hidden');
+            document.getElementById('progress-bar').style.width = `0%`;
+
+            // Volvemos a la pantalla de Intro / Empezar
+            document.getElementById('screen-intro').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
