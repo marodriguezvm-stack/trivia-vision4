@@ -16378,59 +16378,18 @@ exports.handler = async (event, context) => {
 
     try {
         const data = JSON.parse(event.body);
-        const { cedula, accion } = data;
-        const cedulaLimpia = cedula ? cedula.trim() : "";
+        const cedula = data.cedula ? data.cedula.trim() : "";
 
-        if (!cedulaLimpia) {
-            return {
-                statusCode: 400,
-                body: JSON.stringify({ autorizado: false, error: "La cédula es requerida." })
-            };
-        }
-
-        // -------------------------------------------------------------------------
-        // 1. CASO A: Registrar que el usuario ya completó la trivia (Bloqueo inmediato)
-        // -------------------------------------------------------------------------
-        if (accion === "registrar_participacion") {
-            cedulasQueYaJugaron.add(cedulaLimpia);
-            return {
-                statusCode: 200,
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ registrado: true })
-            };
-        }
-
-        // -------------------------------------------------------------------------
-        // 2. CASO B: Validación inicial (Cuando da clic en "Ir al Nivel 2")
-        // -------------------------------------------------------------------------
-
-        // Primero: Verificamos si la cédula ya participó en la sesión activa del servidor
-        if (cedulasQueYaJugaron.has(cedulaLimpia)) {
-            return {
-                statusCode: 200,
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ 
-                    autorizado: false, 
-                    yaParticipo: true, 
-                    mensaje: "Esta cédula ya completó su participación en la trivia." 
-                })
-            };
-        }
-
-        // Segundo: Verificamos si la cédula es cliente autorizado normalmente
-        const autorizado = clientesAutorizados.has(cedulaLimpia);
+        // Validar si existe en nuestro Set de clientes autorizados
+        const autorizado = clientesAutorizados.has(cedula);
 
         return {
             statusCode: 200,
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ 
-                autorizado: autorizado,
-                yaParticipo: false 
-            })
+            body: JSON.stringify({ autorizado: autorizado })
         };
-
     } catch (err) {
         return {
             statusCode: 400,
