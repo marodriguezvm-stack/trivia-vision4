@@ -487,22 +487,21 @@
             document.getElementById('non-client-overlay').classList.add('hidden');
             restartGame();
         }
-
-        // Envía el formulario simulado asíncronamente con Fetch sin romper la experiencia local
+		// Envía el formulario simulado asíncronamente con Fetch sin romper la experiencia local
         function sendDataToNetlify() {
-            const formData = new FormData();
+            const formData = new URLSearchParams();
 
             formData.append("form-name", "registro-trivia");
-            formData.append("nombre", tempFormData.nombre);
-            formData.append("cedula", tempFormData.cedula);
-            formData.append("email", tempFormData.email);
-            formData.append("telefono", tempFormData.telefono);
-            formData.append("prediccion_campeon", userPrediction);
+            formData.append("nombre", tempFormData.nombre || "");
+            formData.append("cedula", tempFormData.cedula || "");
+            formData.append("email", tempFormData.email || "");
+            formData.append("telefono", tempFormData.telefono || "");
+            formData.append("prediccion_campeon", userPrediction || "");
 
             fetch("/", {
                 method: "POST",
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: new URLSearchParams(formData).toString()
+                body: formData.toString()
             })
             .then(() => {
                 mostrarPantallaFinal();
@@ -520,15 +519,22 @@
                 music.pause();
             }
 
+            // Ocultamos elementos de progreso y niveles
             document.getElementById('progress-bar').style.width = `100%`;
             document.getElementById('level-badge').classList.add('hidden');
             document.getElementById('timer-wrapper').classList.add('hidden');
             document.getElementById('progress-wrapper').classList.add('hidden');
             
+            // Ocultamos de forma segura las pantallas de juego y formulario
             document.getElementById('screen-game').classList.add('hidden');
-            document.getElementById('screen-end').classList.remove('hidden');
+            document.getElementById('screen-form').classList.add('hidden');
+            
+            // Mostramos la pantalla final con la copa
+            const screenEnd = document.getElementById('screen-end');
+            if (screenEnd) {
+                screenEnd.classList.remove('hidden');
+            }
         }
-
         function restartGame() {
             clearInterval(timerInterval);
             document.getElementById('lead-form').reset();
