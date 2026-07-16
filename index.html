@@ -454,63 +454,41 @@
 
         // Se ejecuta al completar el formulario de registro (Paso intermedio con consulta al servidor de Netlify)
         
+		
 		async function submitForm(event) {
 			event.preventDefault();
-    
+
 			const submitBtn = document.getElementById('btn-form-submit');
-			const cedulaIngresada = document.getElementById('input-id').value.trim(); // Usamos input-id
+			const cedulaIngresada = document.getElementById('input-id').value.trim();
 
-			// Bloquear botón y mostrar carga
+			// Bloquear botón durante el proceso de transición
 			submitBtn.disabled = true;
-			submitBtn.innerText = "Verificando cliente...";
+			submitBtn.innerText = "Cargando...";
 
-			try {
-				// 📡 CONSULTA SEGURA A NETLIFY FUNCTIONS
-				const response = await fetch("/.netlify/functions/validar-cedula", {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ cedula: cedulaIngresada })
-				});
+			// Ya no hacemos el fetch a validar-cedula. 
+			// Simplemente guardamos los datos y pasamos al Nivel 2.
+			tempFormData = {
+				nombre: document.getElementById('input-name').value,
+				cedula: cedulaIngresada,
+				email: document.getElementById('input-email').value,
+				telefono: document.getElementById('input-phone').value
+			};
 
-				const result = await response.json();
+			// Cambiamos al Nivel 2 directamente
+			currentLevel = 2;
+			document.getElementById('screen-form').classList.add('hidden');
+			document.getElementById('screen-game').classList.remove('hidden');
+			
+			document.getElementById('level-badge').classList.remove('hidden');
+			document.getElementById('timer-wrapper').classList.remove('hidden');
+			document.getElementById('progress-wrapper').classList.remove('hidden');
+			updateLevelBadge();
 
-				// 🚨 SI LA CÉDULA NO EXISTE EN LA BASE DE DATOS
-				if (!result.autorizado) {
-					document.getElementById('non-client-overlay').classList.remove('hidden');
-					// Restablecemos el botón por si cierran el popup e intentan con otra cédula
-					submitBtn.disabled = false;
-					submitBtn.innerText = "Ir al Nivel 2 ➔";
-					return;
-				}
-
-				// Si está autorizado, guardamos los datos usando los nuevos IDs limpios
-				tempFormData = {
-					nombre: document.getElementById('input-name').value,
-					cedula: cedulaIngresada,
-					email: document.getElementById('input-email').value,
-					telefono: document.getElementById('input-phone').value
-				};
-
-				// Cambiamos al Nivel 2
-				currentLevel = 2;
-				document.getElementById('screen-form').classList.add('hidden');
-				document.getElementById('screen-game').classList.remove('hidden');
-				
-				document.getElementById('level-badge').classList.remove('hidden');
-				document.getElementById('timer-wrapper').classList.remove('hidden');
-				document.getElementById('progress-wrapper').classList.remove('hidden');
-				updateLevelBadge();
-
-				showQuestion();
-
-			} catch (error) {
-				console.error("Error al validar cédula:", error);
-				alert("⚠️ Error de conexión al validar cliente. Por favor, vuelve a intentarlo.");
-			} finally {
-				// Aseguramos que el botón no se quede bloqueado permanentemente si hay un error
-				submitBtn.disabled = false;
-				submitBtn.innerText = "Ir al Nivel 2 ➔";
-			}
+			showQuestion();
+			
+			// Restablecemos el botón por si acaso, aunque el usuario ya pasó de pantalla
+			submitBtn.disabled = false;
+			submitBtn.innerText = "Ir al Nivel 2 ➔";
 		}
         // Nueva función para cerrar el popup de NO cliente y reiniciar el juego
         function closeNonClientPopup() {
